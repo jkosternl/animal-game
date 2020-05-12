@@ -118,10 +118,10 @@ public class GameBoardService {
             Math.abs(animal.getY() - other.getY()) < animal.getSize()) {
 
             if (other.isGold()) {
-                other.createAnimal();
-                animal.scored();
-                if (animal.isPlayer())
-                    webSocketService.updateScore(animal);
+                killAnimal(other, animal);
+                return;
+            } else if (animal.isGold()) {
+                killAnimal(animal, other);
                 return;
             }
             if (!animal.isPolice() && other.isPolice() ||
@@ -176,6 +176,13 @@ public class GameBoardService {
     }
 
     private void killAnimal(final Animal animal, final Animal killer) {
+        if (animal.isGold()) {
+            animal.createAnimal(); // Refresh Gold to different location; do not kill
+            killer.scored();
+            if (killer.isPlayer())
+                webSocketService.updateScore(killer);
+            return;
+        }
         animal.kill();
         if (killer != null) {
             webSocketService.sendNews(animal.getAnimalType() + " " + animal.getNumber() + " was killed by " + killer.getAnimalType());
