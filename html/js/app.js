@@ -89,7 +89,7 @@ function drawSnake(message) {
 function showMessage(message) {
   if (message === 'reset') {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    return;
+    message = '* Restart Game *';
   }
 
   $("#news").append("<pre>" + message + "</pre>");

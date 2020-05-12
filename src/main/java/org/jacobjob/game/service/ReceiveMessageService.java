@@ -14,7 +14,7 @@ public class ReceiveMessageService {
 
     @MessageMapping("/controls")
     public void handle(final String controlCode) {
-//        log.info("Received: {}", controlCode);
+        log.debug("Received: {}", controlCode);
         gameBoardService.processKeys(controlCode);
     }
 }
