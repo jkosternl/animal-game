@@ -13,4 +13,7 @@ public class GameState {
     public Animal player = null;
     public boolean resetBoard = true;
     public int gameState = 0;
+
+    public int viewPortX = 0;
+    public int viewPortY = 0;
 }

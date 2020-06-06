@@ -17,8 +17,10 @@ import java.util.List;
 @AllArgsConstructor
 public class GameBoardService {
 
-    private static final int MAX_X = 1200;
-    private static final int MAX_Y = 700;
+    private static final int MAX_X = 1200 * 2;
+    private static final int MAX_Y = 700 * 2;
+    public static final int VIEW_PORT_WIDTH = 1200;
+    public static final int VIEW_PORT_HEIGHT = 700;
     private static final int AMOUNT_OF_SNAKES = 20;
     private static final long REFRESH_DELAY = 100;
 
@@ -40,6 +42,7 @@ public class GameBoardService {
             addAnimals(state, AnimalType.SNAKE, AMOUNT_OF_SNAKES);
             addAnimals(state, AnimalType.POLICE, AMOUNT_OF_SNAKES / 4);
             addAnimals(state, AnimalType.GOLD, AMOUNT_OF_SNAKES / 3);
+            adjustInitialViewPort(state);
             webSocketService.updateScore(state.player);
         }
         try {
@@ -57,10 +60,20 @@ public class GameBoardService {
         log.info("Amount of animals survived: {}", state.animals.size());
     }
 
+    private void adjustInitialViewPort(final GameState state) {
+        state.viewPortX = state.player.getX() - (VIEW_PORT_WIDTH / 2);
+        state.viewPortY = state.player.getY() - (VIEW_PORT_HEIGHT / 2);
+        if (state.viewPortX < 0) state.viewPortX = 0;
+        if (state.viewPortY < 0) state.viewPortY = 0;
+        if (state.viewPortX > MAX_X - VIEW_PORT_WIDTH) state.viewPortX = MAX_X - VIEW_PORT_WIDTH;
+        if (state.viewPortY > MAX_Y - VIEW_PORT_HEIGHT) state.viewPortY = MAX_Y - VIEW_PORT_HEIGHT;
+    }
+
     private void loop(final GameState state) throws InterruptedException {
         // move animals 1 step
         state.animals.forEach(Animal::step);
         state.animals.forEach(Animal::safeGuardEdges);
+        updateViewPort(state);
 
         // check for illegal positions: change status if so.
         state.animals.forEach(animal -> verifyEdges(state, animal));
@@ -75,6 +88,28 @@ public class GameBoardService {
         handleDeadAnimals(state);
 
         Thread.sleep(REFRESH_DELAY);
+    }
+
+    private void updateViewPort(final GameState state) {
+        final int x = state.player.getX();
+        final int y = state.player.getY();
+        final int fromEdge = 200;
+        if (x > state.viewPortX + VIEW_PORT_WIDTH - fromEdge
+            && state.viewPortX < MAX_X - VIEW_PORT_WIDTH) {
+            state.viewPortX += state.player.getSpeed();
+        }
+        if (y > state.viewPortY + VIEW_PORT_HEIGHT - fromEdge
+            && state.viewPortY < MAX_Y - VIEW_PORT_HEIGHT) {
+            state.viewPortY += state.player.getSpeed();
+        }
+        if (x < state.viewPortX + fromEdge
+            && state.viewPortX > 0) {
+            state.viewPortX -= state.player.getSpeed();
+        }
+        if (y < state.viewPortY + fromEdge
+            && state.viewPortY > 0) {
+            state.viewPortY -= state.player.getSpeed();
+        }
     }
 
     private void handleDeadAnimals(final GameState state) {
