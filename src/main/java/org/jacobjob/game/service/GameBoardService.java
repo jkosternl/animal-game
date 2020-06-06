@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jacobjob.game.model.Animal;
 import org.jacobjob.game.model.AnimalType;
+import org.jacobjob.game.model.GameState;
+import org.jacobjob.game.repository.GameStateRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -20,34 +22,30 @@ public class GameBoardService {
     private static final int AMOUNT_OF_SNAKES = 20;
     private static final long REFRESH_DELAY = 100;
 
-    private static int deadAnimalCounter = 0;
-    private static int highestAnimalNumber = 1;
-
     private final WebSocketService webSocketService;
-    private static final List<Animal> animals = new ArrayList<>();
-    private static Animal player = null;
-    private static boolean resetBoard = true;
+    private final GameStateRepository gameState;
 
     @Scheduled(initialDelay = 3_000, fixedRate = 5_000) // Runs every 10 seconds; wait before starting the first time
     public void start() {
+        GameState state = gameState.getState();
         log.info("Start with run loop");
-        if (animals.isEmpty() || resetBoard) {
+        if (state.animals.isEmpty() || state.resetBoard) {
             log.info("Reset player board");
             webSocketService.sendNews("reset");
-            resetBoard = false;
-            deadAnimalCounter = 0;
-            highestAnimalNumber = 1;
-            animals.clear();
-            addAnimals(AnimalType.PLAYER, 1);
-            addAnimals(AnimalType.SNAKE, AMOUNT_OF_SNAKES);
-            addAnimals(AnimalType.POLICE, AMOUNT_OF_SNAKES / 4);
-            addAnimals(AnimalType.GOLD, AMOUNT_OF_SNAKES / 3);
-            webSocketService.updateScore(player);
+            state.resetBoard = false;
+            state.deadAnimalCounter = 0;
+            state.highestAnimalNumber = 1;
+            state.animals.clear();
+            addAnimals(state, AnimalType.PLAYER, 1);
+            addAnimals(state, AnimalType.SNAKE, AMOUNT_OF_SNAKES);
+            addAnimals(state, AnimalType.POLICE, AMOUNT_OF_SNAKES / 4);
+            addAnimals(state, AnimalType.GOLD, AMOUNT_OF_SNAKES / 3);
+            webSocketService.updateScore(state.player);
         }
         try {
             for (int i = 0; i < 48; i++) {
-                loop();
-                if (animals.isEmpty() || resetBoard) {
+                loop(state);
+                if (state.animals.isEmpty() || state.resetBoard) {
                     log.info("Finished after {} steps", i);
                     break;
                 }
@@ -56,49 +54,49 @@ public class GameBoardService {
             log.warn("Interrupted by user.");
             Thread.currentThread().interrupt();
         }
-        log.info("Amount of animals survived: {}", animals.size());
+        log.info("Amount of animals survived: {}", state.animals.size());
     }
 
-    private void loop() throws InterruptedException {
+    private void loop(final GameState state) throws InterruptedException {
         // move animals 1 step
-        animals.forEach(Animal::step);
-        animals.forEach(Animal::safeGuardEdges);
+        state.animals.forEach(Animal::step);
+        state.animals.forEach(Animal::safeGuardEdges);
 
         // check for illegal positions: change status if so.
-        animals.forEach(this::verifyEdges);
+        state.animals.forEach(animal -> verifyEdges(state, animal));
 
         // Send new coordinates of animals to front-end
-        animals.forEach(webSocketService::updateAnimal);
+        state.animals.forEach(webSocketService::updateAnimal);
 
         // Check for collisions and avoid them or find gold
-        animals.forEach(this::findCloseAnimals);
+        state.animals.forEach(animal -> findCloseAnimals(state, animal));
 
         // Clean up the board
-        handleDeadAnimals();
+        handleDeadAnimals(state);
 
         Thread.sleep(REFRESH_DELAY);
     }
 
-    private void handleDeadAnimals() {
+    private void handleDeadAnimals(final GameState state) {
         List<Animal> deadAnimals = new ArrayList<>();
-        animals.stream()
+        state.animals.stream()
             .filter(animal -> !animal.isAlive() && !animal.isGold())
             .forEach(deadAnimals::add);
 
         if (!deadAnimals.isEmpty()) {
-            deadAnimalCounter += deadAnimals.size();
-            animals.removeAll(deadAnimals);
-            if (deadAnimalCounter == 4) {
-                addAnimals(AnimalType.SNAKE, 2);
-                deadAnimalCounter = 0;
+            state.deadAnimalCounter += deadAnimals.size();
+            state.animals.removeAll(deadAnimals);
+            if (state.deadAnimalCounter == 4) {
+                addAnimals(state, AnimalType.SNAKE, 2);
+                state.deadAnimalCounter = 0;
             }
         }
     }
 
-    private void findCloseAnimals(final Animal animal) {
+    private void findCloseAnimals(final GameState state, final Animal animal) {
         if (!animal.isAlive()) return;
         final int detectDistance = 40;
-        animals.stream()
+        state.animals.stream()
             .filter(other -> (
                 other.isAlive() &&
                     animal.getNumber() != other.getNumber() &&
@@ -108,30 +106,30 @@ public class GameBoardService {
                     animal.getY() - detectDistance <= other.getY()
             ))
             .forEach(other -> {
-                handleCollision(animal, other);
+                handleCollision(state, animal, other);
                 avoidCollision(animal, other);
             });
     }
 
-    private void handleCollision(final Animal animal, final Animal other) {
+    private void handleCollision(final GameState state, final Animal animal, final Animal other) {
         if (Math.abs(animal.getX() - other.getX()) < animal.getSize() &&
             Math.abs(animal.getY() - other.getY()) < animal.getSize()) {
 
             if (other.isGold()) {
-                killAnimal(other, animal);
+                killAnimal(state, other, animal);
                 return;
             } else if (animal.isGold()) {
-                killAnimal(animal, other);
+                killAnimal(state, animal, other);
                 return;
             }
             if (!animal.isPolice() && other.isPolice() ||
                 animal.isPolice() && other.isPolice() ||
                 !animal.isPolice() && !other.isPolice()) {
-                killAnimal(animal, other);
+                killAnimal(state, animal, other);
                 return;
             }
             if (animal.isPolice() && !other.isPolice()) {
-                killAnimal(other, animal);
+                killAnimal(state, other, animal);
             }
         }
     }
@@ -164,10 +162,10 @@ public class GameBoardService {
         return Math.abs(nextX - other.getX()) + Math.abs(nextY - other.getY());
     }
 
-    private void verifyEdges(final Animal animal) {
+    private void verifyEdges(final GameState state, final Animal animal) {
         if (!animal.isAlive() || animal.isGold()) return;
-        if (animal.getX() < 0 || animal.getY() < 0) killAnimal(animal, null);
-        if (animal.getX() + animal.getSize() > MAX_X || animal.getY() + animal.getSize() > MAX_Y) killAnimal(animal, null);
+        if (animal.getX() < 0 || animal.getY() < 0) killAnimal(state, animal, null);
+        if (animal.getX() + animal.getSize() > MAX_X || animal.getY() + animal.getSize() > MAX_Y) killAnimal(state, animal, null);
         if (!animal.isAlive()) {
             webSocketService.sendNews(animal.getAnimalType().toString() + " " + animal.getNumber() + " was killed by the edge");
             if (animal.isPlayer())
@@ -175,12 +173,14 @@ public class GameBoardService {
         }
     }
 
-    private void killAnimal(final Animal animal, final Animal killer) {
+    private void killAnimal(final GameState state, final Animal animal, final Animal killer) {
         if (animal.isGold()) {
             animal.createAnimal(); // Refresh Gold to different location; do not kill
-            killer.scored();
-            if (killer.isPlayer())
-                webSocketService.updateScore(killer);
+            if (killer != null) {
+                killer.scored();
+                if (killer.isPlayer())
+                    webSocketService.updateScore(killer);
+            }
             return;
         }
         animal.kill();
@@ -191,37 +191,38 @@ public class GameBoardService {
         }
         webSocketService.updateAnimal(animal);
         if (animal.isPlayer()) {
-            resetBoard = true;
+            state.resetBoard = true;
             webSocketService.sendNews("You scored: " + animal.getScore() + " points!");
         }
     }
 
-    private void addAnimals(final AnimalType type, final int amount) {
+    private void addAnimals(final GameState state, final AnimalType type, final int amount) {
         if (amount == 0) return;
         for (int i = 1; i <= amount; i++) {
-            animals.add(new Animal(highestAnimalNumber++, type, MAX_X, MAX_Y));
+            state.animals.add(new Animal(state.highestAnimalNumber++, type, MAX_X, MAX_Y));
         }
         if (type != AnimalType.GOLD) {
             log.info("Creating {} {}", amount, type);
             webSocketService.sendNews("Added " + amount + " new " + type);
         }
         if (type.equals(AnimalType.PLAYER)) {
-            player = animals.get(animals.size() - 1);
+            state.player = state.animals.get(state.animals.size() - 1);
         }
     }
 
     public void processKeys(final String controlCode) {
+        GameState state = gameState.getState();
         double correction = Math.PI / 6d;
         if ("left".equals(controlCode)) {
-            player.changeOrientation(-correction);
+            state.player.changeOrientation(-correction);
         } else if ("right".equals(controlCode)) {
-            player.changeOrientation(correction);
+            state.player.changeOrientation(correction);
         } else if ("up".equals(controlCode)) {
-            player.changeSpeed(2);
+            state.player.changeSpeed(2);
         } else if ("down".equals(controlCode)) {
-            player.changeSpeed(-2);
+            state.player.changeSpeed(-2);
         } else if ("reset".equals(controlCode)) {
-            resetBoard = true;
+            state.resetBoard = true;
         }
     }
 }
