@@ -29,7 +29,7 @@ public class Animal {
     private boolean avoiding = false; // avoiding edges
     private final AnimalType animalType;
 
-    private double speed = 6;
+    private double speed = 5;
     private int size = 8;
     private int score;
     private boolean alive;
@@ -41,7 +41,7 @@ public class Animal {
         createAnimal();
         this.number = number;
         animalType = type;
-        if (isPolice()) speed -= 2;
+        if (isPolice()) speed -= 1;
         if (isPlayer()) speed -= 2;
     }
 

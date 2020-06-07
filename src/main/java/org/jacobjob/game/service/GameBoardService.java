@@ -21,32 +21,21 @@ public class GameBoardService {
     private static final int MAX_Y = 700 * 2;
     public static final int VIEW_PORT_WIDTH = 1200;
     public static final int VIEW_PORT_HEIGHT = 700;
-    private static final int AMOUNT_OF_SNAKES = 20;
-    private static final long REFRESH_DELAY = 100;
+    private static final int AMOUNT_OF_SNAKES = 30;
+    private static final long REFRESH_DELAY = 50;
 
     private final WebSocketService webSocketService;
     private final GameStateRepository gameState;
 
-    @Scheduled(initialDelay = 3_000, fixedRate = 5_000) // Runs every 10 seconds; wait before starting the first time
-    public void start() {
+    @Scheduled(initialDelay = 3_000, fixedRate = 5_000) // Runs every 5 seconds; wait before starting the first time
+    public void start() throws InterruptedException {
         GameState state = gameState.getState();
         log.info("Start with run loop");
-        if (state.animals.isEmpty() || state.resetBoard) {
-            log.info("Reset player board");
-            webSocketService.sendNews("reset");
-            state.resetBoard = false;
-            state.deadAnimalCounter = 0;
-            state.highestAnimalNumber = 1;
-            state.animals.clear();
-            addAnimals(state, AnimalType.PLAYER, 1);
-            addAnimals(state, AnimalType.SNAKE, AMOUNT_OF_SNAKES);
-            addAnimals(state, AnimalType.POLICE, AMOUNT_OF_SNAKES / 4);
-            addAnimals(state, AnimalType.GOLD, AMOUNT_OF_SNAKES / 3);
-            adjustInitialViewPort(state);
-            webSocketService.updateScore(state.player);
+        if (state.resetBoard) {
+            setupGameBoard(state);
         }
         try {
-            for (int i = 0; i < 48; i++) {
+            for (int i = 0; i < 100; i++) {
                 loop(state);
                 if (state.animals.isEmpty() || state.resetBoard) {
                     log.info("Finished after {} steps", i);
@@ -58,6 +47,22 @@ public class GameBoardService {
             Thread.currentThread().interrupt();
         }
         log.info("Amount of animals survived: {}", state.animals.size());
+    }
+
+    private void setupGameBoard(final GameState state) throws InterruptedException {
+        log.info("Reset player board");
+        Thread.sleep(2000L);
+        webSocketService.sendNews("reset");
+        state.resetBoard = false;
+        state.deadAnimalCounter = 0;
+        state.highestAnimalNumber = 1;
+        state.animals.clear();
+        addAnimals(state, AnimalType.PLAYER, 1);
+        addAnimals(state, AnimalType.SNAKE, AMOUNT_OF_SNAKES);
+        addAnimals(state, AnimalType.POLICE, AMOUNT_OF_SNAKES / 4);
+        addAnimals(state, AnimalType.GOLD, AMOUNT_OF_SNAKES / 3);
+        adjustInitialViewPort(state);
+        webSocketService.updateScore(state.player);
     }
 
     private void adjustInitialViewPort(final GameState state) {
@@ -93,22 +98,22 @@ public class GameBoardService {
     private void updateViewPort(final GameState state) {
         final int x = state.player.getX();
         final int y = state.player.getY();
-        final int fromEdge = 200;
+        final int fromEdge = 250;
         if (x > state.viewPortX + VIEW_PORT_WIDTH - fromEdge
             && state.viewPortX < MAX_X - VIEW_PORT_WIDTH) {
-            state.viewPortX += state.player.getSpeed();
+            state.viewPortX = x + fromEdge - VIEW_PORT_WIDTH;
         }
         if (y > state.viewPortY + VIEW_PORT_HEIGHT - fromEdge
             && state.viewPortY < MAX_Y - VIEW_PORT_HEIGHT) {
-            state.viewPortY += state.player.getSpeed();
+            state.viewPortY = y + fromEdge - VIEW_PORT_HEIGHT;
         }
         if (x < state.viewPortX + fromEdge
             && state.viewPortX > 0) {
-            state.viewPortX -= state.player.getSpeed();
+            state.viewPortX = x - fromEdge;
         }
         if (y < state.viewPortY + fromEdge
             && state.viewPortY > 0) {
-            state.viewPortY -= state.player.getSpeed();
+            state.viewPortY = y - fromEdge;
         }
     }
 

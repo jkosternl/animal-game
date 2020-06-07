@@ -63,7 +63,7 @@ function drawSnake(message) {
   let animal = JSON.parse(message);
 
   let oldAnimal = jQuery.data(document.body, String(animal.animalType + animal.number));
-  if (oldAnimal) { 
+  if (oldAnimal) {
     ctx.clearRect(oldAnimal.x, oldAnimal.y, oldAnimal.size, oldAnimal.size);
   }
   
