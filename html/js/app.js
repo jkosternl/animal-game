@@ -68,9 +68,6 @@ function drawSnake(message) {
   }
   
   ctx.fillStyle = "#59c500";
-  if (animal.alive === false) {
-    ctx.fillStyle = "red";
-  }
   if (animal.animalType === "POLICE"){
     ctx.fillStyle = "blue";
   }
@@ -80,10 +77,10 @@ function drawSnake(message) {
   if (animal.animalType === "PLAYER"){
     ctx.fillStyle = "purple";
   }
-  ctx.fillRect(animal.x, animal.y, animal.size, animal.size);
-  // ctx.fillText(animal.number, animal.x + 8, animal.y + 8); 
-  
-  jQuery.data(document.body, String(animal.animalType + animal.number), animal);
+  if (animal.alive) {
+    ctx.fillRect(animal.x, animal.y, animal.size, animal.size);
+    jQuery.data(document.body, String(animal.animalType + animal.number), animal);
+  }
 }
 
 function showMessage(message) {

@@ -135,7 +135,7 @@ public class GameBoardService {
 
     private void findCloseAnimals(final GameState state, final Animal animal) {
         if (!animal.isAlive()) return;
-        final int detectDistance = 40;
+        final int detectDistance = 60;
         state.animals.stream()
             .filter(other -> (
                 other.isAlive() &&
@@ -214,7 +214,9 @@ public class GameBoardService {
     }
 
     private void killAnimal(final GameState state, final Animal animal, final Animal killer) {
+        animal.kill();
         if (animal.isGold()) {
+            webSocketService.updateAnimal(animal);
             animal.createAnimal(); // Refresh Gold to different location; do not kill
             if (killer != null) {
                 killer.scored();
@@ -223,7 +225,6 @@ public class GameBoardService {
             }
             return;
         }
-        animal.kill();
         if (killer != null) {
             webSocketService.sendNews(animal.getAnimalType() + " " + animal.getNumber() + " was killed by " + killer.getAnimalType());
             killer.changeSize(2); // Reward killing
