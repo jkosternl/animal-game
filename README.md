@@ -12,7 +12,7 @@ Catch the gold items, while running from the snakes (yellow) and police (blue).
 
 # How to start
 Prerequisites: installed applications: 
-- Java JDK 13 or 14 
+- Java JDK 11 or up (tested with 14, 15) 
 - Maven 3
 
 Start application Java back-end by:
