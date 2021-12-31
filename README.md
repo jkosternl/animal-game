@@ -5,14 +5,14 @@ Catch the gold items, while running from the snakes (yellow) and police (blue).
 ![game example](animal-game.png "Example game playing field")
 
 # Technology stack
-* Java 14
+* Java 17
 * Spring Boot
 * WebSockets
 * JQuery & HTML 
 
 # How to start
 Prerequisites: installed applications: 
-- Java JDK 11 or up (tested with 14, 15) 
+- Java JDK 11 or up (tested with 14, 15, 17) 
 - Maven 3
 
 Start application Java back-end by:
