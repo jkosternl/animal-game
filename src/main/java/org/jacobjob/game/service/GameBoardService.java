@@ -27,6 +27,7 @@ public class GameBoardService {
     private final WebSocketService webSocketService;
     private final GameStateRepository gameState;
 
+    @SuppressWarnings("unused")
     @Scheduled(initialDelay = 3_000, fixedRate = 5_000) // Runs every 5 seconds; wait before starting the first time
     public void start() throws InterruptedException {
         GameState state = gameState.getState();

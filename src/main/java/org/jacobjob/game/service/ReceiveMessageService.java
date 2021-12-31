@@ -12,6 +12,7 @@ public class ReceiveMessageService {
 
     private GameBoardService gameBoardService;
 
+    @SuppressWarnings("unused")
     @MessageMapping("/controls")
     public void handle(final String controlCode) {
         log.debug("Received: {}", controlCode);
