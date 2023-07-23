@@ -7,11 +7,9 @@ import org.jacobjob.game.model.AnimalType;
 import org.jacobjob.game.model.GameState;
 import org.jacobjob.game.model.WebSocketTopic;
 import org.jacobjob.game.repository.GameStateRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
 
 @Slf4j
 @Service
@@ -20,7 +18,6 @@ public class WebSocketService {
     private final SimpMessagingTemplate template;
     private final GameStateRepository gameState;
 
-    @Autowired
     public WebSocketService(final SimpMessagingTemplate template, final GameStateRepository gameStateRepository) {
         this.template = template;
         gameState = gameStateRepository;
