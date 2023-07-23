@@ -1,5 +1,7 @@
 package org.jacobjob.game.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jacobjob.game.model.Animal;
@@ -8,9 +10,6 @@ import org.jacobjob.game.model.GameState;
 import org.jacobjob.game.repository.GameStateRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -36,13 +35,14 @@ public class GameBoardService {
             setupGameBoard(state);
         }
         try {
-            for (int i = 0; i < 100; i++) {
-                loop(state);
-                if (state.animals.isEmpty() || state.resetBoard) {
-                    log.info("Finished after {} steps", i);
-                    break;
-                }
-            }
+      for (int i = 0; i < 100; i++) {
+        loop(state);
+        if (state.isPause()) i--;
+        if (state.animals.isEmpty() || state.resetBoard) {
+          log.info("Finished after {} steps", i);
+          break;
+        }
+      }
         } catch (final InterruptedException e) {
             log.warn("Interrupted by user.");
             Thread.currentThread().interrupt();
@@ -66,35 +66,37 @@ public class GameBoardService {
         webSocketService.updateScore(state.player);
     }
 
-    private void adjustInitialViewPort(final GameState state) {
-        state.viewPortX = state.player.getX() - (VIEW_PORT_WIDTH / 2);
-        state.viewPortY = state.player.getY() - (VIEW_PORT_HEIGHT / 2);
-        if (state.viewPortX < 0) state.viewPortX = 0;
-        if (state.viewPortY < 0) state.viewPortY = 0;
-        if (state.viewPortX > MAX_X - VIEW_PORT_WIDTH) state.viewPortX = MAX_X - VIEW_PORT_WIDTH;
-        if (state.viewPortY > MAX_Y - VIEW_PORT_HEIGHT) state.viewPortY = MAX_Y - VIEW_PORT_HEIGHT;
+  private void adjustInitialViewPort(final GameState state) {
+    state.viewPortX = state.player.getX() - (VIEW_PORT_WIDTH / 2);
+    state.viewPortY = state.player.getY() - (VIEW_PORT_HEIGHT / 2);
+    if (state.viewPortX < 0) state.viewPortX = 0;
+    if (state.viewPortY < 0) state.viewPortY = 0;
+    if (state.viewPortX > MAX_X - VIEW_PORT_WIDTH) state.viewPortX = MAX_X - VIEW_PORT_WIDTH;
+    if (state.viewPortY > MAX_Y - VIEW_PORT_HEIGHT) state.viewPortY = MAX_Y - VIEW_PORT_HEIGHT;
+  }
+
+  private void loop(final GameState state) throws InterruptedException {
+    // move animals 1 step
+    if (!state.pause) {
+      state.animals.forEach(Animal::step);
+      state.animals.forEach(Animal::safeGuardEdges);
     }
+    updateViewPort(state);
 
-    private void loop(final GameState state) throws InterruptedException {
-        // move animals 1 step
-        state.animals.forEach(Animal::step);
-        state.animals.forEach(Animal::safeGuardEdges);
-        updateViewPort(state);
+    // check for illegal positions: change status if so.
+    state.animals.forEach(animal -> verifyEdges(state, animal));
 
-        // check for illegal positions: change status if so.
-        state.animals.forEach(animal -> verifyEdges(state, animal));
+    // Send new coordinates of animals to front-end
+    state.animals.forEach(webSocketService::updateAnimal);
 
-        // Send new coordinates of animals to front-end
-        state.animals.forEach(webSocketService::updateAnimal);
+    // Check for collisions and avoid them or find gold
+    state.animals.forEach(animal -> findCloseAnimals(state, animal));
 
-        // Check for collisions and avoid them or find gold
-        state.animals.forEach(animal -> findCloseAnimals(state, animal));
+    // Clean up the board
+    handleDeadAnimals(state);
 
-        // Clean up the board
-        handleDeadAnimals(state);
-
-        Thread.sleep(REFRESH_DELAY);
-    }
+    Thread.sleep(REFRESH_DELAY);
+  }
 
     private void updateViewPort(final GameState state) {
         final int x = state.player.getX();
@@ -219,11 +221,11 @@ public class GameBoardService {
         if (animal.isGold()) {
             webSocketService.updateAnimal(animal);
             animal.createAnimal(); // Refresh Gold to different location; do not kill
-            if (killer != null) {
-                killer.scored();
-                if (killer.isPlayer())
-                    webSocketService.updateScore(killer);
-            }
+      if (killer != null) {
+        killer.scored();
+        killer.changeSize(1); // Reward killing
+        if (killer.isPlayer()) webSocketService.updateScore(killer);
+      }
             return;
         }
         if (killer != null) {
@@ -261,10 +263,13 @@ public class GameBoardService {
             state.player.changeOrientation(correction);
         } else if ("up".equals(controlCode)) {
             state.player.changeSpeed(2);
-        } else if ("down".equals(controlCode)) {
-            state.player.changeSpeed(-2);
-        } else if ("reset".equals(controlCode)) {
-            state.resetBoard = true;
-        }
+    } else if ("down".equals(controlCode)) {
+      state.player.changeSpeed(-2);
+    } else if ("reset".equals(controlCode)) {
+      state.resetBoard = true;
+    } else if ("pause".equals(controlCode)) {
+      state.pause = !state.pause;
+      webSocketService.sendNews(state.isPause() ? "Game paused" : "Game continued!");
+    }
     }
 }

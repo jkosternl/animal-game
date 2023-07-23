@@ -55,6 +55,9 @@ document.onkeydown = function(e) {
       case 82: // 'r'
         stompClient.send("/inbound/controls", "reset");
         break;
+      case 32: // whitespace
+        stompClient.send("/inbound/controls", "pause");
+        break;
   }
   // https://keycode.info/
 };
