@@ -8,6 +8,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class GameStateRepository {
 
-    private final GameState state = new GameState();
-
+  private final GameState state = new GameState();
 }

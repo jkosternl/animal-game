@@ -10,12 +10,12 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class ReceiveMessageService {
 
-    private GameBoardService gameBoardService;
+  private GameBoardService gameBoardService;
 
-    @SuppressWarnings("unused")
-    @MessageMapping("/controls")
-    public void handle(final String controlCode) {
-        log.debug("Received: {}", controlCode);
-        gameBoardService.processKeys(controlCode);
-    }
+  @SuppressWarnings("unused")
+  @MessageMapping("/controls")
+  public void handle(final String controlCode) {
+    log.debug("Received: {}", controlCode);
+    gameBoardService.processKeys(controlCode);
+  }
 }
