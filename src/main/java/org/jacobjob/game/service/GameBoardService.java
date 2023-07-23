@@ -138,7 +138,7 @@ public class GameBoardService {
 
   private void findCloseAnimals(final GameState state, final Animal animal) {
     if (!animal.isAlive()) return;
-    final int detectDistance = 60;
+    final int detectDistance = state.player.getSize() * 8;
     state.animals.stream()
         .filter(
             other ->
