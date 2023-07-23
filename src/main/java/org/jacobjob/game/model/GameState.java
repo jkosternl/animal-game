@@ -15,5 +15,5 @@ public class GameState {
 
   public int viewPortX = 0;
   public int viewPortY = 0;
-  public boolean pause = false;
+  public boolean pause = true;
 }

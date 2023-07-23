@@ -26,6 +26,7 @@ function connect() {
     stompClient.subscribe("/topic/score", function (message) {
       showScore(message.body);
     });
+    showMessage("Press spacebar to start!");
   });
 
   socket.onclose = function(e) {
