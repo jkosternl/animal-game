@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public class Animal {
   private static final int FROM_EDGE = 50;
+  private static final Random random = new Random();
 
   // Orientation
   public static final double NORTH = 1.5d * Math.PI;
@@ -45,7 +46,6 @@ public class Animal {
   }
 
   public void createAnimal() {
-    final Random random = new Random();
     x = random.nextInt(maxX - FROM_EDGE) + 15;
     y = random.nextInt(maxY - FROM_EDGE) + 15;
     orientation = Math.random() * 2d * Math.PI;

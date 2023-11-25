@@ -170,10 +170,13 @@ public class GameBoardService {
           || animal.isPolice() && other.isPolice()
           || !animal.isPolice() && !other.isPolice()) {
         killAnimal(state, animal, other);
+        if (other.isPolice()) 
+          animal.changeSpeed(1); // Reward the police from catching: make them faster
         return;
       }
       if (animal.isPolice() && !other.isPolice()) {
         killAnimal(state, other, animal);
+        animal.changeSpeed(1); // Reward the police from catching: make them faster
       }
     }
   }
