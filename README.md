@@ -20,9 +20,7 @@ Start application Java back-end by:
 * Starting it by executing: `java -jar target/animal-game-0.0.1-SNAPSHOT.jar`
 
 Start application in front-end by:
-* Open your browser
-* browse to the exact location of the files, by adjusting the following path: 
-`file:///location-of-files/html/index.html`
+* Open the following URL in your browser: `http://localhost:8080/`
 
 # Game Controls
 You can control your own animal (purple color) by using the arrow keys on your keyboard.
