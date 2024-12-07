@@ -261,7 +261,7 @@ public class GameBoardService {
       webSocketService.sendNews("Added " + amount + " new " + type);
     }
     if (type.equals(AnimalType.PLAYER)) {
-      state.player = state.animals.get(state.animals.size() - 1);
+      state.player = state.animals.getLast();
     }
   }
 
